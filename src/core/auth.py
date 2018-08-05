@@ -1,7 +1,7 @@
 import re
 from . import settings
-from .api import get_tinder_token
 from .models import User, Location
+from .asserts import get_datetime, post
 import requests
 import robobrowser
 import configparser
@@ -21,9 +21,9 @@ def auth():
         user = fb['username']
         pw = fb['password']
         if user and pw:
-            token = get_fb_access_token(user, pw)
-            id = get_fb_id(token)
-            data = get_tinder_token(id, token)
+            fb_token = get_fb_access_token(user, pw)
+            fb_id = get_fb_id(fb_token)
+            data = get_tinder_token(fb_id, fb_token)
             user = User(
                 id=data['user']['_id'],
                 age_filter_max=data['user']['age_filter_max'],
@@ -43,12 +43,19 @@ def auth():
                 ),
                 token=data['token'],
                 plus=data['globals']['plus'],
+                birthdate=get_datetime(data['user']['birth_date'])
             )
             return user
         else:
             raise ValueError('No Password oder Username/Email found in auth.ini [FACEBOOK]')
     else:
         raise ValueError('[FACEBOOK] Section is needed in auth.ini')
+
+
+def get_tinder_token(id: str, token: str):
+    data = {'facebook_token': token, 'facebook_id': id}
+    response = post('/auth', data)
+    return response.json()
 
 
 def get_fb_access_token(email: str, password: str):

@@ -9,6 +9,7 @@ requests = "*"
 robobrowser = "*"
 lxml = "*"
 dataclasses = "*"
+singleton-decorator = "*"
 
 [dev-packages]
 
