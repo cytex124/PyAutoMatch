@@ -1,3 +1,7 @@
+# Requirements
+
+Python 3.5 or 3.6
+
 # Config
 
 Create a **auth.ini** in the */src* folder.

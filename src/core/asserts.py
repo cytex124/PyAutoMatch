@@ -28,3 +28,8 @@ def get(url_part, token=None):
 
 def post(url_part, data, token=None):
     return requests.post(url(url_part), data=data, headers=get_headers(token=token))
+
+
+def get_location_list():
+    response = requests.get('https://gist.githubusercontent.com/Miserlou/c5cd8364bf9b2420bb29/raw/2bf258763cdddd704f8ffd3ea9a3e81d25e2c6f6/cities.json')
+    return response.json()

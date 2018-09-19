@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>train your model</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <form action="/like" method="post">
+      <div class="container">
+        <div class="row">
+          <div class="offset-md-3 col">
+            <img src="{{url}}" class="img-fluid" alt="Responsive image" height="200px">
+          </div>
+          <div class="col-md-3"></div>
+        </div>
+        <div class="row">
+          <div class="offset-md-3 col">
+            <label for="rating">Rating</label>
+            <input type="range" class="custom-range" min="0" max="10" step="1" id="rating" name="rating">
+          </div>
+          <div class="col-md-3"></div>
+        </div>
+        <div class="row">
+          <div class="offset-md-3 col center">
+            <div>
+              <div class="form-check-inline">
+                <label class="form-check-label">
+                  <input type="radio" class="form-check-input" id="asian" name="race" value="asian" checked>Asian
+                </label>
+              </div>
+              <div class="form-check-inline">
+                <label class="form-check-label">
+                  <input type="radio" class="form-check-input" id="european" name="race" value="european">European
+                </label>
+              </div>
+              <div class="form-check-inline">
+                <label class="form-check-label">
+                  <input type="radio" class="form-check-input" id="black" name="race" value="black">Black
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="offset-md-3 col">
+            <input type="hidden" value="{{id}}" id="id" name="id"/>
+            <input type="hidden" value="{{url}}" id="url" name="url"/>
+            <a class="btn btn-link" href="/dislike">Skip</a>
+            <input type="submit" class="btn btn-primary float-right" value="Send" />
+          </div>
+          <div class="col-md-3"></div>
+        </div>
+      </div>
+    </form>
+
+  </body>
+</html>
