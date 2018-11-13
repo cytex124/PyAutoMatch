@@ -4,8 +4,16 @@ from datetime import datetime
 from singleton_decorator import singleton
 import geocoder
 import logging
+import os
+import requests
+import shutil
+
 
 logger = logging.getLogger(__name__)
+FILTER_TRANS_FILE = open(os.path.join('filters', 'trans.txt'), "r")
+FILTER_TRANS = [x.strip() for x in FILTER_TRANS_FILE.readlines()]
+FILTER_TRANS_FILE.close()
+DOWNLOAD_FOLDER = os.path.join('downloads')
 
 
 @singleton
@@ -34,18 +42,18 @@ class Location:
 class Recommendation:
     id: str
     token: str
-
     distance_mi: int
-
     name: str
     bio: str
     birth_date: datetime
     photo_urls: list
     gender: int
 
-    def decide_match(self):
-        if self.is_hot_or_not():
+    def decide_match(self, args):
+        if self.is_hot_or_not() and self.check_args_filter(args):
             self.like()
+            if args.savepics:
+                self.download_pic()
         else:
             self.dislike()
 
@@ -67,6 +75,19 @@ class Recommendation:
     def is_hot_or_not(self):
         return True
 
+    def check_args_filter(self, args):
+        if args.notrans:
+            for trans_word in FILTER_TRANS:
+                if trans_word in self.bio:
+                    return False
+        return True
+
+    def download_pic(self):
+        r = requests.get(self.photo_urls[0], stream=True)
+        if r.status_code == 200:
+            with open(os.path.join(DOWNLOAD_FOLDER, '{}.jpg'.format(self.id)), 'wb') as f:
+                r.raw.decode_content = True
+                shutil.copyfileobj(r.raw, f)
 
 @dataclass
 class User:
@@ -126,8 +147,11 @@ class User:
         pass
 
     def __str__(self):
+        location_name = self.travel_pos.get_location_name()
+        if location_name == 'None, None':
+            location_name = 'Unknown'
         return '{} - {} - {} - Banned: {} - Find Partner between {}-{} in Distance of {} km in {} with Gender {}'.format(
             self.full_name, 'F' if self.gender else 'M', 'PLUS' if self.plus else 'Not PLUS',
             'YES' if self.banned else 'NO', self.age_filter_min,
-            self.age_filter_max, self.distance_filter, self.travel_pos.get_location_name(),
+            self.age_filter_max, self.distance_filter, location_name,
             'F' if self.gender_filter else 'M')
