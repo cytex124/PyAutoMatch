@@ -11,7 +11,7 @@ def url(path):
     return settings.HOST + path
 
 
-def get_headers(token=None):
+def get_headers(token=None, json=False):
     data = {
         'app_version': '6.9.4',
         'platform': 'ios',
@@ -19,6 +19,8 @@ def get_headers(token=None):
     }
     if token:
         data[settings.TOKEN_PREFIX] = token
+    if json:
+        data['Content-Type'] =  'application/json'
     return data
 
 
@@ -26,8 +28,10 @@ def get(url_part, token=None):
     return requests.get(url(url_part), headers=get_headers(token=token))
 
 
-def post(url_part, data, token=None):
-    return requests.post(url(url_part), data=data, headers=get_headers(token=token))
+def post(url_part, data, token=None, json=False):
+    if json:
+        return requests.post(url(url_part), json=data, headers=get_headers(token=token, json=json))
+    return requests.post(url(url_part), data=data, headers=get_headers(token=token, json=json))
 
 
 def get_location_list():
