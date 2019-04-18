@@ -1,7 +1,7 @@
 import re
 from . import settings
 from .models import User, Location
-from .asserts import get_datetime, post
+from .asserts import get_datetime, post, get
 import requests
 import robobrowser
 import configparser
@@ -27,27 +27,29 @@ def auth():
             fb_id = get_fb_id(fb_token)
             logging.info("Successful logged in Facebook")
             data = get_tinder_token(fb_id, fb_token)
+            token = data['data']['api_token']
+            meta = get_meta_data(token)
             logging.info("Successful logged in Tinder")
             user = User(
-                id=data['user']['_id'],
-                age_filter_max=data['user']['age_filter_max'],
-                age_filter_min=data['user']['age_filter_min'],
-                api_token=data['user']['api_token'],
-                banned=data['user']['banned'],
-                bio=data['user']['bio'],
-                full_name=data['user']['full_name'],
-                distance_filter=data['user']['distance_filter'],
-                gender=data['user']['gender'],
-                gender_filter=data['user']['gender_filter'],
-                discoverable=data['user']['discoverable'],
-                is_traveling=data['user']['is_traveling'],
+                id=meta['user']['_id'],
+                age_filter_max=meta['user']['age_filter_max'],
+                age_filter_min=meta['user']['age_filter_min'],
+                api_token=meta['user']['api_token'],
+                banned=False,
+                bio=meta['user']['bio'],
+                full_name=meta['user']['full_name'],
+                distance_filter=meta['user']['distance_filter'],
+                gender=meta['user']['gender'],
+                gender_filter=meta['user']['gender_filter'],
+                discoverable=meta['user']['discoverable'],
+                is_traveling=True,
                 travel_pos=Location(
-                    lat=data['user']['travel_pos']['lat'],
-                    lon=data['user']['travel_pos']['lon']
+                    lat=meta['travel']['travel_pos']['lat'],
+                    lon=meta['travel']['travel_pos']['lon']
                 ),
-                token=data['token'],
-                plus=data['globals']['plus'],
-                birthdate=get_datetime(data['user']['birth_date'])
+                token=token,
+                plus=meta['globals']['plus'],
+                birthdate=get_datetime(meta['user']['birth_date'])
             )
             logging.info("Logged in as: {}".format(user))
             return user
@@ -57,9 +59,14 @@ def auth():
         raise ValueError('[FACEBOOK] Section is needed in auth.ini')
 
 
+def get_meta_data(token):
+    response = get('/meta', token=token)
+    return response.json()
+
+
 def get_tinder_token(id: str, token: str):
-    data = {'facebook_token': token, 'facebook_id': id}
-    response = post('/auth', data)
+    data = {'token': token, 'facebook_id': id}
+    response = post('/v2/auth/login/facebook', data)
     return response.json()
 
 
