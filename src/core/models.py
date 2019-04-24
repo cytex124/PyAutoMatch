@@ -49,11 +49,11 @@ class Recommendation:
     photo_urls: list
     gender: int
 
-    def decide_match(self, args):
-        if self.is_hot_or_not() and self.check_args_filter(args):
+    def decide_match(self, notrans, savepics):
+        if self.is_hot_or_not() and self.check_args_filter(notrans):
             self.like()
-            if args.savepics:
-                self.download_pic()
+            if savepics:
+                self.download_pics()
         else:
             self.dislike()
 
@@ -75,19 +75,23 @@ class Recommendation:
     def is_hot_or_not(self):
         return True
 
-    def check_args_filter(self, args):
-        if args.notrans:
+    def check_args_filter(self, notrans):
+        if notrans:
             for trans_word in FILTER_TRANS:
                 if trans_word in self.bio:
                     return False
         return True
 
-    def download_pic(self):
-        r = requests.get(self.photo_urls[0], stream=True)
-        if r.status_code == 200:
-            with open(os.path.join(DOWNLOAD_FOLDER, '{}.jpg'.format(self.id)), 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
+    def download_pics(self):
+        index = 0
+        for photo in self.photo_urls:
+            response = requests.get(photo, stream=True)
+            if response.status_code == 200:
+                with open(os.path.join(DOWNLOAD_FOLDER, '{}_{}.jpg'.format(self.id, index)), 'wb') as f:
+                    response.raw.decode_content = True
+                    shutil.copyfileobj(response.raw, f)
+                index += 1
+
 
 @dataclass
 class User:

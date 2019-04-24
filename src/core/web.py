@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+from flask import jsonify
 from .auth import auth
 from singleton_decorator import singleton
 import requests
@@ -51,21 +52,23 @@ def dislike():
     return redirect(url_for('train'))
 
 
-@app.route("/like", methods=['POST', 'GET'])
+@app.route("/like", methods=['POST'])
 def like():
-    if request.method == 'POST':
-        result = request.form
-        file = '{}_{}_{}.jpg'.format(result['id'], result['rating'], result['race'])
-        with open(os.path.join(base, 'train_data', file), 'wb') as handle:
-            response = requests.get(result['url'], stream=True)
-            for block in response.iter_content(1024):
-                if not block:
-                    break
-                handle.write(block)
+    result = request.values
+    file = '{}_{}_{}.jpg'.format(result['id'], result['rating'], result['race'])
+    with open(os.path.join(base, 'train_data', file), 'wb') as handle:
+        response = requests.get(result['url'], stream=True)
+        for block in response.iter_content(1024):
+            if not block:
+                break
+            handle.write(block)
     tinder_train = TinderTrain()
-    if tinder_train.last_rec:
-        tinder_train.last_rec.like()
-    return redirect(url_for('train'))
+    tinder_train.last_rec.like()
+    partner = tinder_train.next_partner()
+    return jsonify({
+        'id': partner.id,
+        'url': partner.photo_urls[0]
+    })
 
 
 def start_ws():
