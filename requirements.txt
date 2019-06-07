@@ -17,7 +17,7 @@ flask==1.0.2
 future==0.17.1
 geocoder==1.38.1
 geographiclib==1.49
-geopy==1.17.0
+geopy==1.20.0
 idna==2.7
 ipython-genutils==0.2.0
 itsdangerous==1.1.0
