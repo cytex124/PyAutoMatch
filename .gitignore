@@ -1,5 +1,6 @@
 env/*
-src/core/train_data/*
+.idea
+./src/core/train_data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
