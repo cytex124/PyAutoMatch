@@ -13,7 +13,7 @@ decorator==4.3.0
 defopt==5.0.0
 docutils==0.14
 flask-compress==1.4.0
-flask==1.0.2
+flask==1.0.3
 future==0.17.1
 geocoder==1.38.1
 geographiclib==1.49
