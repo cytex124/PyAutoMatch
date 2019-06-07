@@ -10,7 +10,7 @@ dash-table==3.1.5
 dash==0.29.0
 dataclasses==0.6
 decorator==4.3.0
-defopt==5.0.0
+defopt==5.1.0
 docutils==0.14
 flask-compress==1.4.0
 flask==1.0.2
