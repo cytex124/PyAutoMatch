@@ -13,14 +13,7 @@ singleton-decorator = "*"
 tflearn = "*"
 flask = "*"
 geocoder = "*"
-geopy = "*"
-markupsafe = "*"
-pony = "*"
-dash = "==0.29.0"
-dash-html-components = "==0.13.2"
-dash-core-components = "==0.38.0"
-dash-table = "==3.1.5"
-python-dateutil = "*"
+click = "*"
 
 [dev-packages]
 

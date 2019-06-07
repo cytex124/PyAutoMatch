@@ -1,15 +1,12 @@
 from dataclasses import dataclass
 from .asserts import get_datetime, get, post, url
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 from singleton_decorator import singleton
+import geocoder
 import logging
 import os
 import requests
 import shutil
-from geopy.geocoders import Nominatim
-from .db import Person
-from pony.orm import commit, db_session
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +14,6 @@ FILTER_TRANS_FILE = open(os.path.join('filters', 'trans.txt'), "r")
 FILTER_TRANS = [x.strip() for x in FILTER_TRANS_FILE.readlines()]
 FILTER_TRANS_FILE.close()
 DOWNLOAD_FOLDER = os.path.join('downloads')
-geolocator = Nominatim(user_agent="specify_your_app_name_here")
 
 
 @singleton
@@ -38,12 +34,8 @@ class Location:
     lon: float
 
     def get_location_name(self):
-        reverse = geolocator.reverse("{} {}".format(self.lat, self.lon), language='de')
-        return '{}, {}'.format(reverse._raw['address']['city'], reverse._raw['address']['country'])
-
-    def get_city_and_contry(self):
-        reverse = geolocator.reverse("{} {}".format(self.lat, self.lon), language='de')
-        return reverse._raw['address']['city'], reverse._raw['address']['country']
+        data = geocoder.google((self.lat, self.lon), method='reverse')
+        return '{}, {}'.format(data.city, data.country_long)
 
 
 @dataclass
@@ -56,18 +48,14 @@ class Recommendation:
     birth_date: datetime
     photo_urls: list
     gender: int
-    location_city: str
-    location_country: str
 
-    def decide_match(self, args):
-        liked = self.is_hot_or_not() and self.check_args_filter(args)
-        if liked:
+    def decide_match(self, notrans, savepics):
+        if self.is_hot_or_not() and self.check_args_filter(notrans):
             self.like()
-            if args.savepics:
-                self.download_pic()
+            if savepics:
+                self.download_pics()
         else:
             self.dislike()
-        self._set_to_stats(liked)
 
     def like(self):
         counter = TinderCounter()
@@ -87,26 +75,22 @@ class Recommendation:
     def is_hot_or_not(self):
         return True
 
-    def check_args_filter(self, args):
-        if args.notrans:
+    def check_args_filter(self, notrans):
+        if notrans:
             for trans_word in FILTER_TRANS:
                 if trans_word in self.bio:
                     return False
         return True
 
-    def download_pic(self):
-        r = requests.get(self.photo_urls[0], stream=True)
-        if r.status_code == 200:
-            with open(os.path.join(DOWNLOAD_FOLDER, '{}.jpg'.format(self.id)), 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
-
-    @db_session
-    def _set_to_stats(self, liked):
-        Person(tinder_id=self.id, name=self.name, city=self.location_city, country=self.location_country,
-               gender=self.gender, birth_date=self.birth_date, is_matched=False, has_liked=liked,
-               create_time=datetime.now())
-        commit()
+    def download_pics(self):
+        index = 0
+        for photo in self.photo_urls:
+            response = requests.get(photo, stream=True)
+            if response.status_code == 200:
+                with open(os.path.join(DOWNLOAD_FOLDER, '{}_{}.jpg'.format(self.id, index)), 'wb') as f:
+                    response.raw.decode_content = True
+                    shutil.copyfileobj(response.raw, f)
+                index += 1
 
 
 @dataclass
@@ -131,7 +115,6 @@ class User:
     birthdate: datetime
 
     def get_match_recommendations(self):
-        location_city, location_country = self.travel_pos.get_city_and_contry()
         response = get('/user/recs', token=self.token)
         if response.status_code != 200:
             if response.status_code == 500:
@@ -156,9 +139,7 @@ class User:
                     birth_date=get_datetime(result['birth_date']),
                     photo_urls=photo_urls,
                     gender=result['gender'],
-                    token=self.token,
-                    location_city=location_city,
-                    location_country=location_country
+                    token=self.token
                 ))
             return recs
 
@@ -171,15 +152,10 @@ class User:
 
     def __str__(self):
         location_name = self.travel_pos.get_location_name()
+        if location_name == 'None, None':
+            location_name = 'Unknown'
         return '{} - {} - {} - Banned: {} - Find Partner between {}-{} in Distance of {} km in {} with Gender {}'.format(
             self.full_name, 'F' if self.gender else 'M', 'PLUS' if self.plus else 'Not PLUS',
             'YES' if self.banned else 'NO', self.age_filter_min,
             self.age_filter_max, self.distance_filter, location_name,
             'F' if self.gender_filter else 'M')
-
-    def get_updates_since_last_month(self):
-        dt = datetime.now() - relativedelta(months=1)
-        dt_str = '{}-{}-{}T10:00:00.404Z'.format(dt.year, dt.month, dt.day)
-        response = post('/updates?locale=de', token=self.token, data={'last_activity_date': dt_str, 'nudge': False}, json=True)
-        content = response.json()
-        return content

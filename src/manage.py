@@ -1,6 +1,6 @@
 import logging
 import logging.config
-import argparse
+import click
 from time import sleep
 
 logging.config.fileConfig('logging.ini')
@@ -8,58 +8,44 @@ logging.config.fileConfig('logging.ini')
 from core.auth import auth
 from core.models import TinderCounter
 from core.web import start_ws
-from core.db import update_person_matches
-from core.dash import run_dash_server
+
 
 logger = logging.getLogger(__name__)
-parser = argparse.ArgumentParser(description='AutoMatch Tinder')
-parser.add_argument('action', help='The action to take (e.g. run, train, cmodel)')
-parser.add_argument('--notrans', action='store_true', help='Filter trans-woman from liking with wordlist, look filters/trans.txt')
-parser.add_argument('--savepics', action='store_true', help='Stores pictures of the girl under the downloads folder')
 
 
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
 def train():
     start_ws()
 
 
-def cmodel():
+@cli.command()
+def createmodel():
     pass
 
 
-def run(args):
+@cli.command()
+@click.option('--notrans', default=False, help='Filters Trans peoples')
+@click.option('--savepics', default=False, help='Download the pics of the liked person.')
+def run(notrans, savepics):
     user = auth()
     while 1:
         try:
             recs = user.get_match_recommendations()
         except (ValueError, ConnectionRefusedError) as err:
-                logger.warning('waiting 5min...')
+                logger.warning('Temp Ban from tinder because bot was very obviously.')
+                logger.warning('waiting 10min...')
                 logger.warning(err)
-                sleep(300)
+                sleep(600)
         else:
             for rec in recs:
-                rec.decide_match(args)
+                rec.decide_match(notrans, savepics)
             logger.info(TinderCounter())
 
 
-def stats():
-    run_dash_server()
-
-
-def update_person_stats():
-    user = auth()
-    content = user.get_updates_since_last_month()
-    update_person_matches(content)
-
-
 if __name__ == '__main__':
-    args = parser.parse_args()
-    if args.action == 'run':
-        run(args)
-    elif args.action == 'stats':
-        run_dash_server()
-    elif args.action == 'ustats':
-        update_person_stats()
-    elif args.action == 'train':
-        train()
-    elif args.action == 'cmodel':
-        cmodel()
+    cli()
