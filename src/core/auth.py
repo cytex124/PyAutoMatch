@@ -6,10 +6,11 @@ import requests
 import robobrowser
 import configparser
 import logging
+import shutil
 
 
 logger = logging.getLogger(__name__)
-FB_AUTH = "https://www.facebook.com/v2.6/dialog/oauth?redirect_uri=fb464891386855067%3A%2F%2Fauthorize%2F&display=touch&state=%7B%22challenge%22%3A%22IUUkEUqIGud332lfu%252BMJhxL4Wlc%253D%22%2C%220_auth_logger_id%22%3A%2230F06532-A1B9-4B10-BB28-B29956C71AB1%22%2C%22com.facebook.sdk_client_state%22%3Atrue%2C%223_method%22%3A%22sfvc_auth%22%7D&scope=user_birthday%2Cuser_photos%2Cuser_education_history%2Cemail%2Cuser_relationship_details%2Cuser_friends%2Cuser_work_history%2Cuser_likes&response_type=token%2Csigned_request&default_audience=friends&return_scopes=true&auth_type=rerequest&client_id=464891386855067&ret=login&sdk=ios&logger_id=30F06532-A1B9-4B10-BB28-B29956C71AB1&ext=1470840777&hash=AeZqkIcf-NEW6vBd"
+FB_AUTH = "https://www.facebook.com/v2.6/dialog/oauth?redirect_uri=fb464891386855067%3A%2F%2Fauthorize%2F&scope=user_birthday%2Cuser_photos%2Cuser_education_history%2Cemail%2Cuser_relationship_details%2Cuser_friends%2Cuser_work_history%2Cuser_likes&response_type=token%2Csigned_request&client_id=464891386855067&ret=login&fallback_redirect_uri=221e1158-f2e9-1452-1a05-8983f99f7d6e&ext=1556057433&hash=Aea6jWwMP_tDMQ9y"
 
 
 def auth():
@@ -24,9 +25,9 @@ def auth():
         pw = fb['password']
         if user and pw:
             fb_token = get_fb_access_token(user, pw)
-            fb_id = get_fb_id(fb_token)
+            # fb_id = get_fb_id(fb_token)
             logging.info("Successful logged in Facebook")
-            data = get_tinder_token(fb_id, fb_token)
+            data = get_tinder_token(fb_token)
             token = data['data']['api_token']
             meta = get_meta_data(token)
             logging.info("Successful logged in Tinder")
@@ -64,9 +65,9 @@ def get_meta_data(token):
     return response.json()
 
 
-def get_tinder_token(id: str, token: str):
-    data = {'token': token, 'facebook_id': id}
-    response = post('/v2/auth/login/facebook', data)
+def get_tinder_token(token: str):
+    data = {'token': token}
+    response = post('/v2/auth/login/facebook?locale=de', data, json=True)
     return response.json()
 
 
@@ -80,14 +81,13 @@ def get_fb_access_token(email: str, password: str):
     f = s.get_form()
     try:
         s.submit_form(f, submit=f.submit_fields['__CONFIRM__'])
-        access_token = re.search(
+        # print(browser.response.content.decode())
+        return re.search(
             r"access_token=([\w\d]+)", s.response.content.decode()).groups()[0]
-        return access_token
-    except Exception as ex:
-        logging.error("access token could not be retrieved. Check your username and password.")
-        logging.error("Official error: %s" % ex)
-        return {"error": "access token could not be retrieved. Check your username and password."}
-
+    except requests.exceptions.InvalidSchema as browserAddress:
+        # print(type(browserAddress))
+        return re.search(
+            r"access_token=([\w\d]+)", str(browserAddress)).groups()[0]
 
 def get_fb_id(access_token: str):
     if "error" in access_token:
