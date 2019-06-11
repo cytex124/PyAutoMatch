@@ -128,17 +128,18 @@ class User:
             results = response['results']
             recs = []
             for result in results:
+                user = result['user']
                 photo_urls = []
-                for photo in result['photos']:
+                for photo in user['photos']:
                     photo_urls.append(photo['url'])
                 recs.append(Recommendation(
-                    id=result['_id'],
-                    distance_mi=result['distance_mi'],
-                    name=result['name'],
-                    bio=result['bio'],
-                    birth_date=get_datetime(result['birth_date']),
+                    id=user['_id'],
+                    distance_mi=user['distance_mi'],
+                    name=user['name'],
+                    bio=user['bio'],
+                    birth_date=get_datetime(user['birth_date']),
                     photo_urls=photo_urls,
-                    gender=result['gender'],
+                    gender=user['gender'],
                     token=self.token
                 ))
             return recs
