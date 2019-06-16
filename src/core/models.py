@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from .asserts import get_datetime, get, post, url
-from datetime import datetime
+from .asserts import get_datetime, get_request, post_request
+from datetime import datetime, timedelta
 from singleton_decorator import singleton
 import geocoder
 import logging
@@ -47,50 +47,101 @@ class Recommendation:
     bio: str
     birth_date: datetime
     photo_urls: list
+    instagram_urls: list
+    video_urls: list
     gender: int
 
     def decide_match(self, notrans, savepics):
-        if self.is_hot_or_not() and self.check_args_filter(notrans):
+        """
+        Decide if it is a match
+        :param notrans: boolean --> If true no Transgenders will be matched (by text). txt-filter-file is under src/filters/trans.txt
+        :param savepics: boolean --> If true pics, videos and instapics will be downloaded to src/downloads
+        :return: none
+        """
+        if self.is_hot_or_not() and self.is_not_in_filter_options(notrans):
             self.like()
             if savepics:
-                self.download_pics()
+                self.download_pics_and_videos()
         else:
             self.dislike()
 
     def like(self):
+        """
+        Like a recommendation. Increases counter.
+        :return: none
+        """
         counter = TinderCounter()
-        response = get('/like/' + self.id, token=self.token)
+        response = get_request('/like/' + self.id, token=self.token)
         result = response.json()
         counter.liked += 1
         if result['match']:
             counter.matches += 1
-        logger.info('Liked: {} {}'.format(self.name, self.photo_urls[0]))
+        try:
+            logger.info('Liked: {} {}'.format(self.name, self.photo_urls[0]))
+        except IndexError:
+            logger.info('Liked: {}'.format(self.name))
 
     def dislike(self):
+        """
+        Dislike a recommendation. Decreases counter.
+        :return: none
+        """
         counter = TinderCounter()
-        _ = get('/pass/' + self.id, token=self.token)
+        _ = get_request('/pass/' + self.id, token=self.token)
         counter.disliked += 1
         logger.info('Disliked: {} {}'.format(self.name, self.photo_urls[0]))
 
     def is_hot_or_not(self):
+        """
+        Decide if person is hot or not.
+        Likes everything at this moment.
+        :return: boolean --> If person is hot or not.
+        """
+        # TODO: Need AI here :D
         return True
 
-    def check_args_filter(self, notrans):
-        if notrans:
+    def is_not_in_filter_options(self, no_trans):
+        """
+        Checks filter options. If everything is fine --> True
+        :param no_trans: boolean --> Transgender filter
+        :return: boolean
+        """
+        # Trans filter
+        if no_trans:
             for trans_word in FILTER_TRANS:
                 if trans_word in self.bio:
                     return False
         return True
 
-    def download_pics(self):
+    def download_pics_and_videos(self):
+        """
+        Downloads Pics and Videos of recommendation.
+        :return: none
+        """
+        self._download_pics(self.photo_urls)
+        self._download_pics(self.instagram_urls, 'instagram')
+        self._download_videos()
+
+    def _download_pics(self, urls, file_suffix=''):
         index = 0
-        for photo in self.photo_urls:
+        for photo in urls:
             response = requests.get(photo, stream=True)
             if response.status_code == 200:
-                with open(os.path.join(DOWNLOAD_FOLDER, '{}_{}.jpg'.format(self.id, index)), 'wb') as f:
+                with open(os.path.join(DOWNLOAD_FOLDER, 'images', '{}_{}_{}.jpg'.format(self.id, file_suffix, index)), 'wb') as f:
                     response.raw.decode_content = True
                     shutil.copyfileobj(response.raw, f)
                 index += 1
+
+    def _download_videos(self):
+        index = 0
+        for video in self.video_urls:
+            r = requests.get(video, stream=True)
+            f = open(os.path.join(DOWNLOAD_FOLDER, 'videos', '{}_{}.mp4'.format(self.id, index)), 'wb')
+            for chunk in r.iter_content(chunk_size=255):
+                if chunk:
+                    f.write(chunk)
+            f.close()
+            index += 1
 
 
 @dataclass
@@ -115,23 +166,51 @@ class User:
     birthdate: datetime
 
     def get_match_recommendations(self):
-        response = get('/user/recs', token=self.token)
-        if response.status_code != 200:
-            if response.status_code == 500:
+        """
+        Get recommendations matches from tinder. Its always between 10 and 20 recommendations
+        :exception: SystemError --> Tinder has some problems
+        :exception: ValueError: --> unknown error. Look at the json output.
+        :exception: ConnectionRefusedError --> You are temp banned :D Just wait some time.
+        :return: dict of recommendations
+        """
+        # GET Recs
+        response_recs = get_request('/user/recs', token=self.token)
+        # Smth went wrong
+        if response_recs.status_code != 200:
+            if response_recs.status_code == 500:
+                # Tinder has some trouble
                 raise SystemError('Tinder has some trouble right now! Don´t worry try it later again!')
             else:
-                raise ValueError('Cant get Recommandation. {}'.format( response.json() ))
+                # Unknown Error
+                raise ValueError('Cant get Recommandation. {}'.format(response_recs.json()))
         else:
-            response = response.json()
-            if 'message' in response and 'recs timeout' in response['message']:
+            # create json
+            response_recs = response_recs.json()
+            # Error?
+            if 'message' in response_recs and 'recs timeout' in response_recs['message']:
                 raise ConnectionRefusedError('Timeout because too much Rec-requests!')
-            results = response['results']
+
+            # GET result dict
+            results = response_recs['results']
             recs = []
+
+            # Create Recommendation objects
             for result in results:
                 user = result['user']
                 photo_urls = []
+                video_urls = []
+                instagram_urls = []
+                # GET Video or Photo URLs (only high resolution)
                 for photo in user['photos']:
-                    photo_urls.append(photo['url'])
+                    if 'processedVideos' in photo:
+                        video_urls.append(photo['processedVideos'][0]['url'])
+                    else:
+                        photo_urls.append(photo['url'])
+                # GET instagram photo URLs
+                if 'instagram' in user and 'photos' in user['instagram']:
+                    for insta_photo in user['instagram']['photos']:
+                        instagram_urls.append(insta_photo['image'])
+                # CREATE Recommendation object
                 recs.append(Recommendation(
                     id=user['_id'],
                     distance_mi=user['distance_mi'],
@@ -139,16 +218,40 @@ class User:
                     bio=user['bio'],
                     birth_date=get_datetime(user['birth_date']),
                     photo_urls=photo_urls,
+                    instagram_urls=instagram_urls,
+                    video_urls=video_urls,
                     gender=user['gender'],
                     token=self.token
                 ))
             return recs
 
     def change_location(self, lat: float, lon: float):
-        _ = post('/user/ping', data={'lat': lat, 'lon': lon}, token=self.token)
+        """
+        Change location of tinder account.
+        :param lat: float
+        :param lon: float
+        :return: none
+        """
+        _ = post_request('/user/ping', data={'lat': lat, 'lon': lon}, token=self.token)
         logger.info("Changed Location to {}".format(self.travel_pos.get_location_name()))
 
+    def get_last_activities(self, time_delta_days: int = 30):
+        """
+        Get last activities like matches. Time
+        :param time_delta_days --> Time delta in days for last activities, default 30 (1 month)
+        :return: dict with updates
+        """
+        dt = datetime.now() - timedelta(days=time_delta_days)
+        dt_str = dt.strftime('%Y-%m-%dT%H:00:00.404Z')
+        return post_request(
+            '/updates',
+            data={'last_activity_date': dt_str, 'nudge': True},
+            token=self.token,
+            json=True
+        )
+
     def refresh(self):
+        # TODO: do it!
         pass
 
     def __str__(self):

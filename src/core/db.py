@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 db = Database()
-db.bind(provider='sqlite', filename=os.path.join('..','tinder.sqlite'), create_db=True)
+db.bind(provider='sqlite', filename=os.path.join('..', 'tinder.sqlite'), create_db=True)
 
 
 class Person(db.Entity):
@@ -25,7 +25,8 @@ db.generate_mapping(check_tables=True, create_tables=True)
 
 
 @db_session
-def update_person_matches(content):
+def update_tinder_matches_stats(user):
+    content = user.get_last_activities()
     for match in content['matches']:
         if 'is_new_message' in match and match['is_new_message']:
             person_tinder_id = match['messages'][0]['from']

@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask import jsonify
-from .auth import auth
+from .auth import auth_with_facebook_on_tinder
 from singleton_decorator import singleton
 import requests
 import os
@@ -14,7 +14,7 @@ base = os.path.dirname(os.path.abspath(os.path.dirname(os.path.realpath(__file__
 class TinderTrain:
 
     def __init__(self):
-        self.user = auth()
+        self.user = auth_with_facebook_on_tinder()
         self.recs = None
         self.recs_counter = 0
         self.last_rec = None

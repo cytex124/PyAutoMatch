@@ -7,45 +7,67 @@ from pony.orm import db_session, select
 
 
 @db_session
-def get_data(group_by):
+def _get_tinderlike_data(group_by: str) -> dict:
+    # Create counter obj
     counter = {}
+    # GET all Persons you liked with the script
     for p in select(p for p in Person):
+        # Order by group name
         group = eval('p.{}'.format(group_by))
+        # Init group
         if group not in counter:
             counter[group] = {}
             counter[group]['likes'] = 1
             counter[group]['matches'] = 0
+        # If inited just upgrade like
         else:
             counter[group]['likes'] += 1
+        # If tinder-like matched you update +1
         if p.is_matched:
             counter[group]['matches'] += 1
     return counter
 
 
 @db_session
-def generate_table():
-    groups = get_data('country')
+def _generate_dash_table() -> html.Table:
+    # Get data ordered by country
+    groups = _get_tinderlike_data('country')
+    # Add quote to groups
     for group_name in groups.keys():
         groups[group_name]['quote'] = '{0:.2f}%'.format(groups[group_name]['matches'] / groups[group_name]['likes'] * 100)
+    # Create Table
     return html.Table(
         # Header
         [html.Tr([html.Th(col) for col in ['country', 'likes', 'matches', 'quote']])] +
 
         # Body
-        [html.Tr([
-            html.Td(i)
-                 ]+[
-            html.Td(groups[i][col]) for col in ['likes', 'matches', 'quote']
-        ]) for i in groups.keys()]
+        [html.Tr(
+            [html.Td(i)] + [html.Td(groups[i][col]) for col in ['likes', 'matches', 'quote']]
+        ) for i in groups.keys()]
     )
 
 
+def _create_graph_data(group_by='country'):
+    # Create graph data
+    counter = _get_tinderlike_data(group_by)
+    data = [
+        {
+            'type': 'bar',
+            'name': 'Likes',
+            'x': [x for x in counter.keys()],
+            'y': [counter[y]['likes'] for y in counter]
+        },
+        {
+            'type': 'bar',
+            'name': 'Matches',
+            'x': [x for x in counter.keys()],
+            'y': [counter[y]['matches'] for y in counter]
+        },
+    ]
+    return data
 
-external_stylesheets = [
-    'https://codepen.io/chriddyp/pen/bWLwgP.css'
-]
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 app.title = 'Tinder Stats'
 app.layout = html.Div(children=[
     html.H1(children='Tinder Stats', style={'text-align': 'center'}),
@@ -65,26 +87,16 @@ app.layout = html.Div(children=[
             }
         }
     ),
-    generate_table()
+    _generate_dash_table()
 ])
-
-
-def get_data_for_graph(group_by='country'):
-    counter = get_data(group_by)
-    data = [
-        {'type': 'bar', 'name': 'Likes', 'x': [x for x in counter.keys()], 'y': [counter[y]['likes'] for y in counter]},
-        {'type': 'bar', 'name': 'Matches', 'x': [x for x in counter.keys()],
-         'y': [counter[y]['matches'] for y in counter]},
-    ]
-    return data
 
 
 @app.callback(
     dash.dependencies.Output('tinder-counter', 'figure'),
     [dash.dependencies.Input('xaxis-column', 'value')]
 )
-def update_output(value):
-    return {'data': get_data_for_graph(value)}
+def _update_graph_data(value):
+    return {'data': _create_graph_data(value)}
 
 
 def run_dash_server():
