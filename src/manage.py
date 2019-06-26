@@ -31,7 +31,7 @@ def createmodel():
 @cli.command()
 @click.option('--notrans', default=False, help='Filters Trans peoples')
 @click.option('--savepics', default=False, help='Download the pics of the liked person.')
-def run(no_trans, save_pics):
+def run(notrans, savepics):
     user = auth_with_facebook_on_tinder()
     while 1:
         try:
@@ -43,7 +43,7 @@ def run(no_trans, save_pics):
             sleep(600)
         else:
             for rec in recs:
-                rec.decide_match(no_trans, save_pics)
+                rec.decide_match(notrans, savepics)
             logger.info(TinderCounter())
 
 
