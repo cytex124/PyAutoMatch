@@ -31,7 +31,7 @@ nbformat==4.4.0
 numpy==1.16.4
 Pillow==6.0.0
 plotly==3.4.1
-pockets==0.7.2
+pockets==0.8
 pony==0.7.6
 python-dateutil==2.7.5
 pytz==2018.7
