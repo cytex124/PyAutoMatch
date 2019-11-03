@@ -33,7 +33,7 @@ Pillow==6.0.0
 plotly==3.4.1
 pockets==0.7.2
 pony==0.7.6
-python-dateutil==2.7.5
+python-dateutil==2.8.1
 pytz==2018.7
 ratelim==0.1.6
 requests==2.22.0
