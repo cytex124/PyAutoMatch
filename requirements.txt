@@ -1,7 +1,7 @@
 beautifulsoup4==4.7.1
 certifi==2019.6.16
 chardet==3.0.4
-Click==7.0
+Click==7.1
 colorama==0.4.1
 dash==0.29.0
 dash-core-components==0.38.0
