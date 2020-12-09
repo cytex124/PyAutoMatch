@@ -3,7 +3,7 @@ certifi==2019.6.16
 chardet==3.0.4
 Click==7.0
 colorama==0.4.1
-dash==0.29.0
+dash==1.18.1
 dash-core-components==0.38.0
 dash-html-components==0.13.2
 dash-renderer==0.14.3
