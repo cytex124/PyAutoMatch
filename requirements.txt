@@ -9,7 +9,7 @@ dash-html-components==0.13.2
 dash-renderer==0.14.3
 dash-table==3.1.5
 dataclasses==0.6
-decorator==4.4.0
+decorator==5.0.4
 defopt==5.1.0
 docutils==0.14
 Flask==1.0.3
